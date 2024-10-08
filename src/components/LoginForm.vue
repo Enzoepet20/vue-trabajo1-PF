@@ -22,13 +22,19 @@
   <script setup lang="ts">
   import { reactive } from 'vue';
   import { useRouter } from 'vue-router';
-  import { useUserStore } from '@/store/user';
-  import type { User } from '@/types/User';
+  import { useUserStore } from '@/stores/user';
+  import type { User } from '@/models/User';
   
   const user = reactive<User>({
+    id: 0,
+    firstName: '',
+    lastName: '',
     user: '',
     password: '',
     remember: false,
+    isAdmin: false,
+    jwtToken: '',
+    refreshTokens: [],
   });
   
   const userStore = useUserStore();
