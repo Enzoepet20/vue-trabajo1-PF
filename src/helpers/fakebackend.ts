@@ -10,6 +10,7 @@ const usersKey = 'vue-3-jwt-refresh-token-users';
 const users: User[] = JSON.parse(localStorage.getItem(usersKey) || '[]');
 
 // Agregar un usuario test en localstorage si no hay ninguno
+
 const user: User = { 
     id: 1, 
     firstName: 'Matias', 
@@ -40,7 +41,9 @@ function fakeBackend() {
 
             // manejamos las rutas falsas como si hicieramos llamados api
             function handleRoute() {
+                console.info(opts);
                 const { method } = opts;
+
                 switch (true) {
                     case url.toString().endsWith('/users/authenticate') && method === 'POST':
                         return authenticate();
@@ -130,7 +133,7 @@ function fakeBackend() {
             }
 
             function unauthorized() {
-                resolve({ status: 401, text: () => Promise.resolve(JSON.stringify({ message: 'Unauthorized' })) } as Response);
+                resolve({ status: 401, text: () => Promise.resolve(JSON.stringify({ message: 'Unauthorized Messi' })) } as Response);
             }
 
             function error(message: string) {

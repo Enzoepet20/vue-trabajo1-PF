@@ -1,24 +1,32 @@
 <template>
   <div class="home-container">
-    <h1>Bienvenido, {{ user?.user }}</h1>
+    <h1>Bienvenido, {{ user?.userName}}</h1>
     <p class="remember-status">
       Recordarme: <span>{{ user?.remember ? 'Sí' : 'No' }}</span>
     </p>
     
     <div class="user-details">
       <h2>Detalles del usuario</h2>
-      <p><strong>Usuario:</strong> {{ user?.user }}</p>
+      <p><strong>Usuario:</strong> {{ user?.userName }}</p>
       <p><strong>Contraseña (Encriptada):</strong> ********</p>
       <p><strong>Fecha de ingreso:</strong> {{ new Date().toLocaleDateString() }}</p>
     </div>
+    <button @click="logout">Logout</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useUserStore } from '@/store/user';
+import { useUserStore } from '@/stores/user';
+import { useAuthStore } from '@/stores/authStore';
+
 
 const userStore = useUserStore();
+const authStore = useAuthStore();
 const user = userStore.getUser;
+
+function logout() {
+  authStore.logout();
+}
 </script>
 
 <style scoped>
