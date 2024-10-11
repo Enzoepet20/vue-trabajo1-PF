@@ -35,10 +35,23 @@ export const useAuthStore = defineStore({
     logout() {
       this.stopRefreshTokenTimer();
       this.auth.data = null;
-      fetchWrapper.post(`${baseUrl}/revoke-token`, {}, { credentials: 'include' });
-      router.push('/');
+    
+      // Eliminar los datos de usuario del localStorage
+      localStorage.removeItem('vue-3-jwt-refresh-token-users');
+    
+      // Revocar el token y redirigir solo cuando la llamada a la API haya terminado
+      fetchWrapper.post(`${baseUrl}/revoke-token`, {}, { credentials: 'include' })
+        .then(() => {
+          // Redirige al login ("/") una vez que el token se haya revocado
+          router.push('/');
+        })
+        .catch(error => {
+          console.error('Error al revocar el token:', error);
+          // Puedes decidir qué hacer si la revocación falla (opcional)
+          router.push('/');
+        });
     },
-
+    
     // Método para refreshToken
     async refreshToken() {
       try {

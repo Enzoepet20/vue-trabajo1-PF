@@ -107,18 +107,26 @@ function fakeBackend() {
 
             function revokeToken() {
                 if (!isLoggedIn()) return unauthorized();
-
+              
                 const refreshToken = getRefreshToken();
                 const _user = users.find(x => x.refreshTokens.includes(refreshToken));
-
-                // Revocar token y guardar en almacenamiento local
-                if(_user !==  undefined) {
-                    _user.refreshTokens = _user.refreshTokens.filter(x => x !== refreshToken);
-                    localStorage.setItem(usersKey, JSON.stringify(users));
+              
+                // Revocar token y actualizar el almacenamiento local
+                if (_user) {
+                  _user.refreshTokens = _user.refreshTokens.filter(x => x !== refreshToken);
+                  
+                  // Si ya no hay refresh tokens, eliminar al usuario del almacenamiento local
+                  if (_user.refreshTokens.length === 0) {
+                    const index = users.findIndex(u => u.id === _user.id);
+                    if (index !== -1) users.splice(index, 1);  // Elimina el usuario
+                  }
+              
+                  localStorage.setItem(usersKey, JSON.stringify(users));
                 }
-
-                return ok({msg: 'Token revocado'});
-            }
+              
+                return ok({ msg: 'Token revocado' });
+              }
+              
 
             // funciona para obtener usuarios, controla  si el usuario está logueado
             function getUsers() {
