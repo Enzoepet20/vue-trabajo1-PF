@@ -9,18 +9,23 @@ import './assets/style.css';
 
 fakeBackend();
 startApp();
-async function startApp() {
 
+async function startApp() {
     const app = createApp(App);
-app.use(createPinia());
-app.use(router);
-try {
+    app.use(createPinia());
+    app.use(router);
+
     const authStore = useAuthStore();
-    await authStore.refreshToken();
-}
-catch (error) {
-    console.error('Error al refrescar el token', error);
-    router.push('/');
-}
-app.mount('#app');
+
+    try {
+        // Verificar si ya hay un usuario autenticado
+        if (authStore.auth?.data?.jwtToken) {
+            await authStore.refreshToken();
+        }
+    } catch (error) {
+        console.error('Error al refrescar el token', error);
+        router.push('/');
+    }
+
+    app.mount('#app');
 }

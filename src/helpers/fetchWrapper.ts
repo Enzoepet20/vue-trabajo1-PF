@@ -8,21 +8,28 @@ delete: request ('DELETE')
 };
 
 function request(method: string) {
-    return (url:string, body?: any, {credentials} : {credentials?: RequestCredentials} = {}) => {
-        const requestOptions:RequestInit = {
-            method,
+    return (url: string, body?: any, { credentials }: { credentials?: RequestCredentials } = {}) => {
+        const requestOptions: RequestInit = {
+            method, // Asegurar que el método se pasa correctamente
             headers: authHeader(url),
         };
+
+        console.log("RequestOptions (antes del body): ", requestOptions);
+
         if (body) {
-            requestOptions.headers ={
+            requestOptions.headers = {
                 ...requestOptions.headers,
                 'Content-Type': 'application/json'
             };
             requestOptions.body = JSON.stringify(body);
         }
+
         if (credentials) {
             requestOptions.credentials = credentials;
         }
+
+        console.log("RequestOptions (después de asignar body y credentials): ", requestOptions);
+
         return fetch(url, requestOptions).then(handleResponse);
     }
 }

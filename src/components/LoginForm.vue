@@ -5,14 +5,15 @@
 
       <!-- Campo Usuario -->
       <div class="input-bx">
-        <Field    name="userName" type="text" :class="{'is-invalid': errors.userName || errors.apiError}" placeholder="Usuario" />
+        <Field name="userName" type="text" :class="{'is-invalid': errors.userName || errors.apiError}" placeholder="Usuario" />
         <ion-icon class="icon" name="person-circle"></ion-icon>
         <!-- Mostrar error de validación -->
         <div class="invalid-feedback">{{ errors.userName }}</div>
       </div>
+
       <!-- Campo Contraseña -->
       <div class="input-bx">
-        <Field  name="password" type="password" :class="{'is-invalid': errors.password || errors.apiError}" placeholder="Contraseña" />
+        <Field name="password" type="password" :class="{'is-invalid': errors.password || errors.apiError}" placeholder="Contraseña" />
         <ion-icon class="icon" name="lock-closed"></ion-icon>
         <!-- Mostrar error de validación -->
         <div class="invalid-feedback">{{ errors.password }}</div>
@@ -29,18 +30,18 @@
       <button type="submit" class="btn">
         <span v-show="isSubmitting" class="loader"></span>
         <p v-show="!isSubmitting">Ingresar</p>
-       </button>
-       <div v-if="errors.apiError" class="error-alert">{{ errors.apiError }}</div>
+      </button>
+
+      <div v-if="errors.apiError" class="error-alert">{{ errors.apiError }}</div>
     </Form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Field, Form, useField, useForm } from 'vee-validate';
+import { Field, Form, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-
 
 // Esquema de validación
 const schema = yup.object().shape({
@@ -49,30 +50,28 @@ const schema = yup.object().shape({
   remember: yup.boolean(),
 });
 
-
-// Configurar el formulario con el esquema de validación
-
 // Inicializamos los campos con useField
 const { value: remember } = useField('remember');
 
-// Store de usuario y router
+// Store de autenticación y router
 const authStore = useAuthStore();
 const router = useRouter();
 
 // Manejar el login
-function handleSubmit(values:any, {setErrors}:any ){
-  const { userName, password} = values;
-  return authStore.login(userName, password).then(() => {
+async function handleSubmit(values: any, { setErrors }: any) {
+  const { userName, password } = values;
+  try {
+    await authStore.login(userName, password);
     router.push('home');
-  })
-  .catch((error) => setErrors({ apiError: error.message }));
+  } catch (error: any) {
+    setErrors({ apiError: 'Usuario o contraseña incorrectos' });
+  }
 }
 
-
- if (authStore.auth.data) {
-    router.push('home');
-  }
-  
+// Redirigir si el usuario ya está autenticado
+if (authStore.auth.data) {
+  router.push('home');
+}
 </script>
 
 <style scoped>
@@ -100,7 +99,6 @@ body {
 }
 
 /* estilos del componente */
-
 .wrapper {
     width: 400px;
     background: transparent;
@@ -128,8 +126,6 @@ body {
     width: 100%;
     height: 100%;
     background: transparent;
-    border: none;
-    outline: none;
     border: 2px solid rgba(255, 255, 255, .2);
     border-radius: 15px;
     color: #fff;
@@ -147,25 +143,17 @@ body {
     transform: translateY(-50%);
     font-size: 1.5em;
 }
+
 .input-bx input.is-invalid {
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    border: none;
     border-color: red;
 }
 
-.input-bx input.is-invalid::placeholder {
-    border-color: red;
-}
-
-.input-bx .invalid-feedback{
+.input-bx .invalid-feedback {
     padding: 0px 16px;
-    margin : 0px;
+    margin: 0px;
     color: red;
     font-weight: 300;
 }
-
 
 .wrapper .remember-forgot {
     display: flex;
@@ -193,19 +181,20 @@ body {
     height: 50px;
     border-radius: 15px;
     border: none;
-    outline: none;
     box-shadow: 0 0 10px rgba(0,0,0,.1);
     cursor: pointer;
     font-size: 1.2em;
     font-weight: 600;
     color: #333;
 }
+
 button p {
-   font-size: 1.2em;
-   font-weight: 600;
-   color: #333;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
 }
-.loader{
+
+.loader {
     margin: auto 0;
     width: 24px;
     height: 24px;
@@ -213,23 +202,21 @@ button p {
     border-bottom-color: transparent;
     border-radius: 50%;
     display: inline-block;
-    box-sizing: border-box;
     animation: rotation 1s linear infinite;
 }
 
 @keyframes rotation {
-0% {
+  0% {
     transform: rotate(0deg);
-}
-100% {
+  }
+  100% {
     transform: rotate(360deg);
-}
+  }
 }
 
-.error-alert{
+.error-alert {
     margin: 16px 0 0 0;
     width: 100%;
-    background: transparent;
     color: red;
     text-align: center;
     font-weight: 400;

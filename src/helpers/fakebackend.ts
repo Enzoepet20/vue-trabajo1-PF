@@ -34,15 +34,15 @@ function fakeBackend() {
 
     const realFetch = window.fetch;
 
-    window.fetch = function (url, opts: any): Promise<Response> {
+    window.fetch = function (url, opts: RequestInit = {}): Promise<Response> {
         return new Promise((resolve, reject) => {
             // Envolvemos la funcion en un setTimeout para simular una llamada a API
             setTimeout(handleRoute, 1000);
 
-            // manejamos las rutas falsas como si hicieramos llamados api
+            // manejamos las rutas falsas como si hiciéramos llamados api
             function handleRoute() {
                 console.info(opts);
-                const { method } = opts;
+                const { method } = opts;  // No es necesario usar opts || {} porque ya tiene un valor predeterminado
 
                 switch (true) {
                     case url.toString().endsWith('/users/authenticate') && method === 'POST':
@@ -54,7 +54,7 @@ function fakeBackend() {
                     case url.toString().endsWith('/users') && method === 'GET':
                         return getUsers();
                     default:
-                        // Pass through any requests not handled above
+                        // Pasar cualquier solicitud no manejada por las rutas falsas
                         return realFetch(url, opts)
                             .then(response => resolve(response))
                             .catch(error => reject(error));
@@ -142,7 +142,7 @@ function fakeBackend() {
 
             function isLoggedIn(): boolean {
                 // Chequea si el JWT esta en el auth header
-                const authHeader = opts.headers?.['Authorization'] || '';
+                const authHeader = (opts?.headers as Record<string, string>)?.['Authorization'] || '';
                 if (!authHeader.startsWith('Bearer fake-jwt-token')) return false;
 
                 // Chequea si el token expiro
@@ -158,7 +158,7 @@ function fakeBackend() {
             }
 
             function body<T>(): T {
-                return opts.body ? JSON.parse(opts.body) : {} as T;
+                return opts && typeof opts.body === 'string' ? JSON.parse(opts.body) : {} as T;
             }
 
             function generateJwtToken(): string {

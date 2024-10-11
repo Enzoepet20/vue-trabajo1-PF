@@ -36,7 +36,7 @@ export const useAuthStore = defineStore({
       this.stopRefreshTokenTimer();
       this.auth.data = null;
       fetchWrapper.post(`${baseUrl}/revoke-token`, {}, { credentials: 'include' });
-      router.push('/login');
+      router.push('/');
     },
 
     // Método para refreshToken
