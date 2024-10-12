@@ -1,89 +1,131 @@
 <template>
-  <div class="home-container">
-    <h1>Bienvenido, {{ user?.userName}}</h1>
-    <p class="remember-status">
-      Recordarme: <span>{{ user?.remember ? 'Sí' : 'No' }}</span>
-    </p>
-    
-    <div class="user-details">
-      <h2>Detalles del usuario</h2>
-      <p><strong>Usuario:</strong> {{ user?.userName }}</p>
-      <p><strong>Contraseña (Encriptada):</strong> ********</p>
-      <p><strong>Fecha de ingreso:</strong> {{ new Date().toLocaleDateString() }}</p>
+  <div class="home-view">
+    <h1>Home View</h1>
+
+    <!-- Mostrar información del usuario -->
+    <div v-if="authStore.auth.data" class="user-info">
+      <h2>Usuario: {{ authStore.auth.data.userName }}</h2>
+      <p>Nombre completo: {{ authStore.auth.data.firstName }} {{ authStore.auth.data.lastName }}</p>
+      <p>Rol: {{ authStore.auth.data.isAdmin ? 'Admin' : 'User' }}</p>
     </div>
-    <button @click="logout">Logout</button>
+
+    <!-- Mostrar información del token -->
+    <div v-if="sesionStore.data" class="token-info">
+      <h3>Token Payload: {{ sesionStore.data.payload }}</h3>
+      <p>Creado: {{ formatDate(sesionStore.data.createdAt) }}</p>
+      <p>Expira: {{ formatDate(sesionStore.data.expiresAt) }}</p>
+      <p>Refresh en: {{ formatDate(sesionStore.data.refreshAt) }}</p>
+    </div>
+
+    <!-- Listado de usuarios si el usuario es admin -->
+    <div v-if="authStore.auth.data?.isAdmin" class="user-list">
+      <h3>Usuarios</h3>
+      <ul>
+        <li v-for="user in state.users" :key="user.id">{{ user.userName }} - {{ user.isAdmin ? 'Admin' : 'User' }}</li>
+      </ul>
+      <button class="create-user-btn" @click="createUser">Crear nuevo usuario</button>
+    </div>
+
+    <!-- Botón de logout -->
+    <button class="logout-btn" @click="logout">Logout</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useUserStore } from '@/stores/user';
 import { useAuthStore } from '@/stores/authStore';
+import { useSesionStore } from '@/stores/sesionStore';
+import { reactive, onMounted } from 'vue';
 
-
-const userStore = useUserStore();
-const authStore = useAuthStore();
-const user = userStore.getUser;
-
-function logout() {
-  authStore.logout();
+// Definición de la interfaz para un usuario
+interface User {
+  id: number;
+  userName: string;
+  isAdmin: boolean;
 }
+
+const authStore = useAuthStore();
+const sesionStore = useSesionStore();
+
+// Estado reactivo para manejar los usuarios
+const state = reactive({
+  users: [] as User[]
+});
+
+// Formatear fechas
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
+};
+
+// Simulación de fetch de usuarios (puedes reemplazar con la API real)
+const fetchUsers = async () => {
+  return [
+    { id: 1, userName: 'admin', isAdmin: true },
+    { id: 2, userName: 'user', isAdmin: false },
+  ];
+};
+
+onMounted(async () => {
+  if (authStore.auth.data?.isAdmin) {
+    state.users = await fetchUsers();
+  }
+});
+
+// Acción para crear un usuario
+const createUser = () => {
+  console.log('Creando usuario...');
+};
+
+// Acción de logout
+const logout = () => {
+  authStore.logout();
+};
 </script>
 
 <style scoped>
-/* Estilos para HomeView */
+/* Estilos generales */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&family=Saira:ital,wght@0,100..900;1,100..900&display=swap');
 
-.home-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Saira", sans-serif;
+  font-size: 16px;
+}
+
+.home-view {
   padding: 20px;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 15px;
-  backdrop-filter: blur(15px);
   width: 100%;
-  max-width: 600px;
-  margin: 50px auto;
+  max-width: 800px;
+  margin: 0 auto;
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, .2);
+  border-radius: 15px;
+  box-shadow: 0 0 10px rgba(0,0,0,.2);
+  background-color: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
-h1 {
-  font-size: 2.5em;
+.user-info, .token-info, .user-list {
   margin-bottom: 20px;
-}
-
-.remember-status span {
-  font-weight: bold;
-  color: #ffd700;
-}
-
-.user-details {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
   background-color: rgba(255, 255, 255, 0.2);
-  padding: 15px;
-  border-radius: 10px;
-  width: 100%;
-  text-align: left;
-  margin-top: 20px;
 }
 
-.user-details p {
-  font-size: 1.2em;
-  margin: 5px 0;
-}
-
-.btn-logout {
-  margin-top: 30px;
-  padding: 10px 20px;
-  background-color: #ff6347;
-  color: white;
+.create-user-btn, .logout-btn {
+  padding: 10px 15px;
   border: none;
-  border-radius: 10px;
+  border-radius: 15px;
+  background-color: #007bff;
+  color: white;
   cursor: pointer;
-  font-size: 1.2em;
-  transition: background-color 0.3s ease;
+  width: 100%;
+  margin-top: 10px;
 }
 
-.btn-logout:hover {
-  background-color: #ff4500;
+.create-user-btn:hover, .logout-btn:hover {
+  background-color: #0056b3;
 }
 </style>

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { fetchWrapper } from '@/helpers/fetchWrapper';
 import type { User } from '@/models/User';
 import router from '@/router';
+import { useSesionStore } from '@/stores/sesionStore';
 
 const baseUrl = `${import.meta.env.VITE_API_URL}/users`;
 
@@ -15,44 +16,37 @@ export const useAuthStore = defineStore({
     }
   }),
   actions: {
-    // Método para login
     async login(username: string, password: string) {
       this.auth.loading = true;
       try {
         const user = await fetchWrapper.post(`${baseUrl}/authenticate`, { username, password });
         this.auth.data = user;
         this.startRefreshTokenTimer();
+
+        const sesionStore = useSesionStore();
+        const payload = this.getJwtPayload(user.jwtToken);
+        const now = new Date();
+        sesionStore.updateSesion(payload, now, this.getRefreshAt(payload.exp), new Date(payload.exp * 1000));
+
         return user;
-      } catch (error) {
-        this.auth.data = null;
-        throw error;
       } finally {
         this.auth.loading = false;
       }
     },
 
-    // Método para logout
     logout() {
       this.stopRefreshTokenTimer();
       this.auth.data = null;
-    
-      // Eliminar los datos de usuario del localStorage
       localStorage.removeItem('vue-3-jwt-refresh-token-users');
-    
-      // Revocar el token y redirigir solo cuando la llamada a la API haya terminado
+
       fetchWrapper.post(`${baseUrl}/revoke-token`, {}, { credentials: 'include' })
-        .then(() => {
-          // Redirige al login ("/") una vez que el token se haya revocado
-          router.push('/');
-        })
+        .then(() => router.push('/'))
         .catch(error => {
           console.error('Error al revocar el token:', error);
-          // Puedes decidir qué hacer si la revocación falla (opcional)
           router.push('/');
         });
     },
-    
-    // Método para refreshToken
+
     async refreshToken() {
       try {
         const user = await fetchWrapper.post(`${baseUrl}/refresh-token`, {}, { credentials: 'include' });
@@ -64,29 +58,36 @@ export const useAuthStore = defineStore({
         throw error;
       }
     },
-    // Método para iniciar el temporizador de refreshToken
+
     startRefreshTokenTimer() {
       if (!this.auth.data || !this.auth.data.jwtToken) return;
-    
-      // Obtener la parte codificada en base64 del JWT (el payload)
+
       const jwtBase64 = this.auth.data.jwtToken.split('.')[1];
-      console.log(jwtBase64);
-    
-      // Decodificar el token base64 (con padding)
       const decodedJwtJson = JSON.parse(atob(jwtBase64.replace(/-/g, '+').replace(/_/g, '/')));
-      
-      // Seteamos el tiempo de expiración del token
       const expires = new Date(decodedJwtJson.exp * 1000);
       const timeout = expires.getTime() - Date.now() - (60 * 1000);
-    
-      this.auth.refreshTokenTimeout = setTimeout(this.refreshToken, timeout);
-    },
-    
 
-    // Método para detener el temporizador de refreshToken
+      if (timeout <= 0) {
+        this.refreshToken();
+      } else {
+        this.auth.refreshTokenTimeout = setTimeout(this.refreshToken.bind(this), timeout);
+      }
+    },
+
     stopRefreshTokenTimer() {
       clearTimeout(this.auth.refreshTokenTimeout);
       this.auth.refreshTokenTimeout = 0;
+    },
+
+    getJwtPayload(jwtToken: string) {
+      if (!jwtToken) return null;
+      const jwtBase64 = jwtToken.split('.')[1];
+      return JSON.parse(atob(jwtBase64.replace(/-/g, '+').replace(/_/g, '/')));
+    },
+
+    getRefreshAt(exp: number): Date {
+      const tokenExpTime = exp * 1000; // convert seconds to milliseconds
+      return new Date(tokenExpTime - 60 * 1000); // 1 minute before expiration
     }
   }
 });
