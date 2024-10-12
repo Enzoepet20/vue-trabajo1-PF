@@ -41,7 +41,7 @@
 import { Field, Form, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '../stores/authStore';
 
 // Esquema de validación
 const schema = yup.object().shape({

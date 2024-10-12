@@ -32,8 +32,8 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/authStore';
-import { useSesionStore } from '@/stores/sesionStore';
+import { useAuthStore } from '../stores/authStore';
+import { useSesionStore } from '../stores/sesionStore';
 import { reactive, onMounted } from 'vue';
 
 // Definición de la interfaz para un usuario
