@@ -4,7 +4,7 @@
 
     <!-- Mostrar la hora actual -->
     <div class="current-time">
-      <p>Hora actual: {{ formatDate(currentTime) }}</p>
+      <p>Hora actual: {{ formatDate(state.currentTime) }}</p>
     </div>
 
     <!-- Mostrar información del usuario -->
@@ -18,18 +18,18 @@
     <div v-if="sesionStore.data" class="token-info">
       <h3>Token Payload: {{ sesionStore.data.payload }}</h3>
       <p>Creado: {{ formatDate(sesionStore.data.createdAt) }}</p>
-      <p :class="{ 'updated': refreshUpdated }">Expira: {{ formatDate(expiresAt) }}</p>
-      <p :class="{ 'updated': refreshUpdated }">Refresh en: {{ formatDate(refreshAt) }}</p>
+      <p :class="{ 'updated': state.refreshUpdated }">Expira: {{ formatDate(state.expiresAt) }}</p>
+      <p :class="{ 'updated': state.refreshUpdated }">Refresh en: {{ formatDate(state.refreshAt) }}</p>
     </div>
 
     <!-- Listado de usuarios si el usuario es admin -->
     <div v-if="authStore.auth.data?.isAdmin" class="user-list">
       <h3>Lista de Usuarios</h3>
-    <ul>
-      <li v-for="user in users" :key="user.id">
-        {{ user.userName }} - {{ user.isAdmin ? 'Admin' : 'User' }}
-      </li>
-    </ul>
+      <ul>
+        <li v-for="user in state.users" :key="user.id">
+          {{ user.userName }} - {{ user.isAdmin ? 'Admin' : 'User' }}
+        </li>
+      </ul>
       <button class="create-user-btn" @click="createUser">Crear nuevo usuario</button>
     </div>
 
@@ -41,48 +41,36 @@
 <script setup lang="ts">
 import { useAuthStore } from '../stores/authStore';
 import { useSesionStore } from '../stores/sesionStore';
-import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
+import { reactive, onMounted, onUnmounted, watch } from 'vue';
 import { getUsers } from '../helpers/fakebackend';
 
-
 import type { User } from '../models/User';
-
-
-const users = ref<User[]>([]);
-// Definición de la interfaz para un usuario
 
 const authStore = useAuthStore();
 const sesionStore = useSesionStore();
 
-// Estado reactivo para manejar los usuarios
+// Definición del estado reactivo para manejar todos los valores
 const state = reactive({
-  users: [] as User[]
+  users: [] as User[],
+  currentTime: new Date(),
+  expiresAt: new Date(sesionStore.data?.expiresAt || ''),
+  refreshAt: new Date(sesionStore.data?.refreshAt || ''),
+  refreshUpdated: false,
 });
-
-// Estado reactivo para la hora actual
-const currentTime = ref(new Date());
-
-// Estado reactivo para los tiempos de expiración y refresh
-const expiresAt = ref(new Date(sesionStore.data?.expiresAt || ''));
-const refreshAt = ref(new Date(sesionStore.data?.refreshAt || ''));
-
-// Estado reactivo para manejar si el refresh ha sido actualizado
-const refreshUpdated = ref(false);
 
 // Formatear fechas
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
 };
 
-
 // Iniciar el intervalo para actualizar la hora actual cada segundo
 let intervalId: ReturnType<typeof setInterval>;
 
-  onMounted(async () => {
+onMounted(async () => {
   if (authStore.auth.data?.isAdmin) {
     try {
       // Asegúrate de que estás asignando los usuarios al estado correcto
-      users.value = await getUsers(); // Actualizamos users directamente
+      state.users = await getUsers(); // Aquí almacenamos los usuarios correctamente en el estado reactivo
     } catch (error) {
       console.error('Error al obtener usuarios:', error);
     }
@@ -90,21 +78,25 @@ let intervalId: ReturnType<typeof setInterval>;
 
   // Actualizar la hora cada segundo
   intervalId = setInterval(() => {
-    currentTime.value = new Date();
+    state.currentTime = new Date();
+
     if (sesionStore.data) {
       const newExpiresAt = new Date(sesionStore.data.expiresAt);
       const newRefreshAt = new Date(sesionStore.data.refreshAt);
-      if (newExpiresAt.getTime() !== expiresAt.value.getTime() || newRefreshAt.getTime() !== refreshAt.value.getTime()) {
-        expiresAt.value = newExpiresAt;
-        refreshAt.value = newRefreshAt;
-        refreshUpdated.value = true;
+
+      if (newExpiresAt.getTime() !== state.expiresAt.getTime() || newRefreshAt.getTime() !== state.refreshAt.getTime()) {
+        state.expiresAt = newExpiresAt;
+        state.refreshAt = newRefreshAt;
+        state.refreshUpdated = true;
+
         setTimeout(() => {
-          refreshUpdated.value = false;
-        }, 1000);
+          state.refreshUpdated = false;
+        }, 1000); // Duración de la animación
       }
     }
   }, 1000);
 });
+
 onUnmounted(() => {
   // Limpiar el intervalo cuando el componente se desmonte
   clearInterval(intervalId);
@@ -125,8 +117,8 @@ watch(
   () => sesionStore.data,
   (newData) => {
     if (newData) {
-      expiresAt.value = new Date(newData.expiresAt);
-      refreshAt.value = new Date(newData.refreshAt);
+      state.expiresAt = new Date(newData.expiresAt);
+      state.refreshAt = new Date(newData.refreshAt);
     }
   }
 );
@@ -197,6 +189,4 @@ watch(
     opacity: 1;
   }
 }
-
 </style>
-
