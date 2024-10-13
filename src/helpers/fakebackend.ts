@@ -70,8 +70,10 @@ function fakeBackend() {
                 if (!user) return error('Usuario o contraseña incorrectos');
 
                 user.jwtToken = generateJwtToken(); // Asignar nuevo JWT
-                user.refreshTokens.push(generateRefreshToken());
+                const refreshToken = generateRefreshToken();
+                user.refreshTokens.push(refreshToken);
                 localStorage.setItem(usersKey, JSON.stringify(users));
+                setRefreshTokenCookie(refreshToken);
 
                 return ok({
                     id: user.id,
@@ -84,17 +86,19 @@ function fakeBackend() {
             }
 
             function refreshToken() {
-                const refreshToken = getRefreshToken();
+                const refreshToken = getRefreshTokenFromCookie(); // Obtener el refresh token de la cookie
                 if (!refreshToken) return unauthorized();
 
                 const user = users.find(x => x.refreshTokens.includes(refreshToken));
                 if (!user) return unauthorized();
 
-                // Reemplazar refresh token viejo por uno nuevo y guardar
+                // Reemplazar el refresh token viejo por uno nuevo
                 user.refreshTokens = user.refreshTokens.filter(x => x !== refreshToken);
-                user.refreshTokens.push(generateRefreshToken());
+                const newRefreshToken = generateRefreshToken();
+                user.refreshTokens.push(newRefreshToken);
                 user.jwtToken = generateJwtToken();  // Generar un nuevo JWT
                 localStorage.setItem(usersKey, JSON.stringify(users));
+                setRefreshTokenCookie(newRefreshToken);
 
                 return ok({
                     id: user.id,
@@ -109,16 +113,13 @@ function fakeBackend() {
             function revokeToken() {
                 if (!isLoggedIn()) return unauthorized();
 
-                const refreshToken = getRefreshToken();
+                const refreshToken = getRefreshTokenFromCookie();
                 const _user = users.find(x => x.refreshTokens.includes(refreshToken));
 
                 if (_user) {
                     _user.refreshTokens = _user.refreshTokens.filter(x => x !== refreshToken);
-                    if (_user.refreshTokens.length === 0) {
-                        const index = users.findIndex(u => u.id === _user.id);
-                        if (index !== -1) users.splice(index, 1);
-                    }
                     localStorage.setItem(usersKey, JSON.stringify(users));
+                    deleteRefreshTokenCookie(); // Eliminar el token de la cookie
                 }
 
                 return ok({ msg: 'Token revocado' });
@@ -165,12 +166,21 @@ function fakeBackend() {
             }
 
             function generateRefreshToken(): string {
-                const token = new Date().getTime().toString();
-                return token;
+                return Math.random().toString(36).substring(2);
             }
 
-            function getRefreshToken(): string {
+            function setRefreshTokenCookie(token: string) {
+                const cookieExpiry = new Date();
+                cookieExpiry.setDate(cookieExpiry.getDate() + 7); // Expira en 7 días
+                document.cookie = `fakeRefreshToken=${token}; expires=${cookieExpiry.toUTCString()}; path=/`;
+            }
+
+            function getRefreshTokenFromCookie(): string {
                 return (document.cookie.split(';').find(x => x.includes('fakeRefreshToken')) || '=').split('=')[1];
+            }
+
+            function deleteRefreshTokenCookie() {
+                document.cookie = 'fakeRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             }
         });
     };

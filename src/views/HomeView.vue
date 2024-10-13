@@ -2,6 +2,11 @@
   <div class="home-view">
     <h1>Home View</h1>
 
+    <!-- Mostrar la hora actual -->
+    <div class="current-time">
+      <p>Hora actual: {{ formatDate(currentTime) }}</p>
+    </div>
+
     <!-- Mostrar información del usuario -->
     <div v-if="authStore.auth.data" class="user-info">
       <h2>Usuario: {{ authStore.auth.data.userName }}</h2>
@@ -13,8 +18,8 @@
     <div v-if="sesionStore.data" class="token-info">
       <h3>Token Payload: {{ sesionStore.data.payload }}</h3>
       <p>Creado: {{ formatDate(sesionStore.data.createdAt) }}</p>
-      <p>Expira: {{ formatDate(sesionStore.data.expiresAt) }}</p>
-      <p>Refresh en: {{ formatDate(sesionStore.data.refreshAt) }}</p>
+      <p :class="{ 'updated': refreshUpdated }">Expira: {{ formatDate(expiresAt) }}</p>
+      <p :class="{ 'updated': refreshUpdated }">Refresh en: {{ formatDate(refreshAt) }}</p>
     </div>
 
     <!-- Listado de usuarios si el usuario es admin -->
@@ -34,7 +39,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '../stores/authStore';
 import { useSesionStore } from '../stores/sesionStore';
-import { reactive, onMounted } from 'vue';
+import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
 
 // Definición de la interfaz para un usuario
 interface User {
@@ -51,6 +56,16 @@ const state = reactive({
   users: [] as User[]
 });
 
+// Estado reactivo para la hora actual
+const currentTime = ref(new Date());
+
+// Estado reactivo para los tiempos de expiración y refresh
+const expiresAt = ref(new Date(sesionStore.data?.expiresAt || ''));
+const refreshAt = ref(new Date(sesionStore.data?.refreshAt || ''));
+
+// Estado reactivo para manejar si el refresh ha sido actualizado
+const refreshUpdated = ref(false);
+
 // Formatear fechas
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
@@ -64,10 +79,40 @@ const fetchUsers = async () => {
   ];
 };
 
+// Iniciar el intervalo para actualizar la hora actual cada segundo
+let intervalId: ReturnType<typeof setInterval>;
+
 onMounted(async () => {
   if (authStore.auth.data?.isAdmin) {
     state.users = await fetchUsers();
   }
+
+  // Actualizar la hora cada segundo
+  intervalId = setInterval(() => {
+    currentTime.value = new Date();
+
+    // Verificar si los tiempos de expiración o refresh han cambiado
+    if (sesionStore.data) {
+      const newExpiresAt = new Date(sesionStore.data.expiresAt);
+      const newRefreshAt = new Date(sesionStore.data.refreshAt);
+
+      // Si el refresh o expira cambian, marcar como actualizados y reiniciar la animación
+      if (newExpiresAt.getTime() !== expiresAt.value.getTime() || newRefreshAt.getTime() !== refreshAt.value.getTime()) {
+        expiresAt.value = newExpiresAt;
+        refreshAt.value = newRefreshAt;
+        refreshUpdated.value = true;
+
+        setTimeout(() => {
+          refreshUpdated.value = false; // Desactivar la animación después de un tiempo
+        }, 1000); // Duración de la animación
+      }
+    }
+  }, 1000);
+});
+
+onUnmounted(() => {
+  // Limpiar el intervalo cuando el componente se desmonte
+  clearInterval(intervalId);
 });
 
 // Acción para crear un usuario
@@ -79,6 +124,17 @@ const createUser = () => {
 const logout = () => {
   authStore.logout();
 };
+
+// Verificar si los valores de la sesión cambian y actualizar los tiempos
+watch(
+  () => sesionStore.data,
+  (newData) => {
+    if (newData) {
+      expiresAt.value = new Date(newData.expiresAt);
+      refreshAt.value = new Date(newData.refreshAt);
+    }
+  }
+);
 </script>
 
 <style scoped>
@@ -128,4 +184,24 @@ const logout = () => {
 .create-user-btn:hover, .logout-btn:hover {
   background-color: #0056b3;
 }
+
+/* Estilo para la animación de actualización */
+.updated {
+  animation: fade-in-out 1s ease-in-out;
+}
+
+/* Definición de la animación */
+@keyframes fade-in-out {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 </style>
+

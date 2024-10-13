@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { fetchWrapper } from '@/helpers/fetchWrapper';
 import type { User } from '@/models/User';
-import router from '@/router';
 import { useSesionStore } from '@/stores/sesionStore';
+import router from '@/router';
 
 const baseUrl = `${import.meta.env.VITE_API_URL}/users`;
 
@@ -12,7 +12,7 @@ export const useAuthStore = defineStore({
     auth: {
       loading: false,
       data: null as User | null,
-      refreshTokenTimeout: 0,
+      refreshTokenTimeout: null as ReturnType<typeof setTimeout> | null,
     }
   }),
   actions: {
@@ -51,7 +51,7 @@ export const useAuthStore = defineStore({
       try {
         const user = await fetchWrapper.post(`${baseUrl}/refresh-token`, {}, { credentials: 'include' });
         this.auth.data = user;
-        this.startRefreshTokenTimer();
+        this.startRefreshTokenTimer(); // Reinicia el temporizador tras recibir el nuevo token
         return user;
       } catch (error) {
         this.logout();
@@ -65,18 +65,27 @@ export const useAuthStore = defineStore({
       const jwtBase64 = this.auth.data.jwtToken.split('.')[1];
       const decodedJwtJson = JSON.parse(atob(jwtBase64.replace(/-/g, '+').replace(/_/g, '/')));
       const expires = new Date(decodedJwtJson.exp * 1000);
-      const timeout = expires.getTime() - Date.now() - (60 * 1000);
+      const timeout = expires.getTime() - Date.now() - (60 * 1000); // Refrescar el token 1 minuto antes de que expire
 
-      if (timeout <= 0) {
-        this.refreshToken();
+      // Si ya existe un temporizador anterior, lo limpiamos
+      if (this.auth.refreshTokenTimeout) {
+        clearTimeout(this.auth.refreshTokenTimeout);
+      }
+
+      if (timeout > 0) {
+        this.auth.refreshTokenTimeout = setTimeout(() => {
+          this.refreshToken();
+        }, timeout);
       } else {
-        this.auth.refreshTokenTimeout = setTimeout(this.refreshToken.bind(this), timeout);
+        this.refreshToken(); // Si ya está expirado o cerca de expirar, refrescamos inmediatamente
       }
     },
 
     stopRefreshTokenTimer() {
-      clearTimeout(this.auth.refreshTokenTimeout);
-      this.auth.refreshTokenTimeout = 0;
+      if (this.auth.refreshTokenTimeout) {
+        clearTimeout(this.auth.refreshTokenTimeout);
+        this.auth.refreshTokenTimeout = null;
+      }
     },
 
     getJwtPayload(jwtToken: string) {
