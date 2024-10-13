@@ -24,10 +24,12 @@
 
     <!-- Listado de usuarios si el usuario es admin -->
     <div v-if="authStore.auth.data?.isAdmin" class="user-list">
-      <h3>Usuarios</h3>
-      <ul>
-        <li v-for="user in state.users" :key="user.id">{{ user.userName }} - {{ user.isAdmin ? 'Admin' : 'User' }}</li>
-      </ul>
+      <h3>Lista de Usuarios</h3>
+    <ul>
+      <li v-for="user in users" :key="user.id">
+        {{ user.userName }} - {{ user.isAdmin ? 'Admin' : 'User' }}
+      </li>
+    </ul>
       <button class="create-user-btn" @click="createUser">Crear nuevo usuario</button>
     </div>
 
@@ -40,13 +42,14 @@
 import { useAuthStore } from '../stores/authStore';
 import { useSesionStore } from '../stores/sesionStore';
 import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
+import { getUsers } from '../helpers/fakebackend';
 
+
+import type { User } from '../models/User';
+
+
+const users = ref<User[]>([]);
 // Definición de la interfaz para un usuario
-interface User {
-  id: number;
-  userName: string;
-  isAdmin: boolean;
-}
 
 const authStore = useAuthStore();
 const sesionStore = useSesionStore();
@@ -71,45 +74,37 @@ const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
 };
 
-// Simulación de fetch de usuarios (puedes reemplazar con la API real)
-const fetchUsers = async () => {
-  return [
-    { id: 1, userName: 'admin', isAdmin: true },
-    { id: 2, userName: 'user', isAdmin: false },
-  ];
-};
 
 // Iniciar el intervalo para actualizar la hora actual cada segundo
 let intervalId: ReturnType<typeof setInterval>;
 
-onMounted(async () => {
+  onMounted(async () => {
   if (authStore.auth.data?.isAdmin) {
-    state.users = await fetchUsers();
+    try {
+      // Asegúrate de que estás asignando los usuarios al estado correcto
+      users.value = await getUsers(); // Actualizamos users directamente
+    } catch (error) {
+      console.error('Error al obtener usuarios:', error);
+    }
   }
 
   // Actualizar la hora cada segundo
   intervalId = setInterval(() => {
     currentTime.value = new Date();
-
-    // Verificar si los tiempos de expiración o refresh han cambiado
     if (sesionStore.data) {
       const newExpiresAt = new Date(sesionStore.data.expiresAt);
       const newRefreshAt = new Date(sesionStore.data.refreshAt);
-
-      // Si el refresh o expira cambian, marcar como actualizados y reiniciar la animación
       if (newExpiresAt.getTime() !== expiresAt.value.getTime() || newRefreshAt.getTime() !== refreshAt.value.getTime()) {
         expiresAt.value = newExpiresAt;
         refreshAt.value = newRefreshAt;
         refreshUpdated.value = true;
-
         setTimeout(() => {
-          refreshUpdated.value = false; // Desactivar la animación después de un tiempo
-        }, 1000); // Duración de la animación
+          refreshUpdated.value = false;
+        }, 1000);
       }
     }
   }, 1000);
 });
-
 onUnmounted(() => {
   // Limpiar el intervalo cuando el componente se desmonte
   clearInterval(intervalId);

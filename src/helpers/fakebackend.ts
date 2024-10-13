@@ -1,5 +1,4 @@
 export { fakeBackend };
-
 import type { User } from '@/models/User';
 import type { JwtPayload } from '@/models/JwtModel';
 import type { AuthRequestBody } from '@/models/AuthReqModel';
@@ -37,6 +36,10 @@ const user2: User = {
 if (!users.length) {
     users.push(user, user2); // Agregar ambos usuarios
     localStorage.setItem(usersKey, JSON.stringify(users));
+}
+
+export function getUsers(): User[] {
+    return users;
 }
 
 function fakeBackend() {
@@ -125,10 +128,7 @@ function fakeBackend() {
                 return ok({ msg: 'Token revocado' });
             }
 
-            function getUsers() {
-                if (!isLoggedIn()) return unauthorized();
-                return ok(users);
-            }
+
 
             // Auxiliares
             function ok(body: any) {
