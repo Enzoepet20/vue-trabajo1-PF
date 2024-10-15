@@ -9,15 +9,17 @@ export const useSesionStore = defineStore({
     data: null as Sesion | null,  // Asegurarse de que el estado esté en el tipo Sesion
   }),
   actions: {
-    updateSesion(payload: string, createdAt: Date, refreshAt: Date, expiresAt: Date) {
-      // Actualizar la sesión con el modelo Sesion
-      this.data = {
-        payload,
-        createdAt,
-        refreshAt,
-        expiresAt,
-      } as Sesion;
+updateSesion(payload: string, createdAt: Date, refreshAt: Date, expiresAt: Date) {
+  // Usar $patch para asegurar la reactividad
+  this.$patch({
+    data: {
+      payload,
+      createdAt,
+      refreshAt,
+      expiresAt,
     },
+  });
+},
 
     setLoading(loading: boolean) {
       this.loading = loading;

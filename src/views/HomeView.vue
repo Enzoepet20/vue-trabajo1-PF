@@ -14,13 +14,13 @@
       <p>Rol: {{ authStore.auth.data.isAdmin ? 'Admin' : 'User' }}</p>
     </div>
 
-    <!-- Mostrar información del token -->
-    <div v-if="sesionStore.data" class="token-info">
-      <h3>Token Payload: {{ sesionStore.data.payload }}</h3>
-      <p>Creado: {{ formatDate(sesionStore.data.createdAt) }}</p>
-      <p :class="{ 'updated': state.refreshUpdated }">Expira: {{ formatDate(state.expiresAt) }}</p>
-      <p :class="{ 'updated': state.refreshUpdated }">Refresh en: {{ formatDate(state.refreshAt) }}</p>
-    </div>
+<!-- Mostrar información del token -->
+<div v-if="sesionStore.data" class="token-info">
+  <h3>Token Payload: {{ sesionStore.data.payload }}</h3>
+  <p>Creado: {{ formatDate(sesionStore.data.createdAt) }}</p>
+  <p :class="{ 'updated': state.refreshUpdated }">Expira: {{ formatDate(state.expiresAt) }}</p>
+  <p :class="{ 'updated': state.refreshUpdated }">Refresh en: {{ formatDate(state.refreshAt) }}</p>
+</div>
 
     <!-- Listado de usuarios si el usuario es admin -->
     <div v-if="authStore.auth.data?.isAdmin" class="user-list">
@@ -66,31 +66,32 @@ const formatDate = (date: Date) => {
 // Iniciar el intervalo para actualizar la hora actual cada segundo
 let intervalId: ReturnType<typeof setInterval>;
 
-onMounted(async () => {
+  onMounted(async () => {
   if (authStore.auth.data?.isAdmin) {
     try {
-      // Asegúrate de que estás asignando los usuarios al estado correcto
-      state.users = await getUsers(); // Aquí almacenamos los usuarios correctamente en el estado reactivo
+      state.users = await getUsers();
     } catch (error) {
       console.error('Error al obtener usuarios:', error);
     }
   }
 
-  // Actualizar la hora cada segundo
+  // Intervalo para actualizar la hora actual cada segundo
   intervalId = setInterval(() => {
-    state.currentTime = new Date();
+    state.currentTime = new Date(); // Actualiza cada segundo la hora actual
 
     if (sesionStore.data) {
+      // Cargar las nuevas fechas de expiración y refresh
       const newExpiresAt = new Date(sesionStore.data.expiresAt);
       const newRefreshAt = new Date(sesionStore.data.refreshAt);
 
+      // Comparar las fechas anteriores con las nuevas para refrescar el estado
       if (newExpiresAt.getTime() !== state.expiresAt.getTime() || newRefreshAt.getTime() !== state.refreshAt.getTime()) {
         state.expiresAt = newExpiresAt;
         state.refreshAt = newRefreshAt;
-        state.refreshUpdated = true;
+        state.refreshUpdated = true;  // Marcar el estado como actualizado
 
         setTimeout(() => {
-          state.refreshUpdated = false;
+          state.refreshUpdated = false;  // Quitar la animación después de 1 segundo
         }, 1000); // Duración de la animación
       }
     }
@@ -98,9 +99,29 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  // Limpiar el intervalo cuando el componente se desmonte
-  clearInterval(intervalId);
+  clearInterval(intervalId);  // Limpiar el intervalo cuando el componente se desmonte
 });
+
+// Verificar si los valores de la sesión cambian y actualizar los tiempos
+watch(
+  () => sesionStore.data,
+  (newData) => {
+    if (newData) {
+      console.log("Session data changed:", {
+        payload: newData.payload,
+        createdAt: newData.createdAt,
+        refreshAt: newData.refreshAt,
+        expiresAt: newData.expiresAt
+      });
+    }
+
+    if (newData) {
+      state.expiresAt = new Date(newData.expiresAt);
+      state.refreshAt = new Date(newData.refreshAt);
+    }
+  },
+  { immediate: true }
+);
 
 // Acción para crear un usuario
 const createUser = () => {
@@ -117,10 +138,25 @@ watch(
   () => sesionStore.data,
   (newData) => {
     if (newData) {
+      console.log("Session data changed:", {
+        payload: newData.payload,
+        createdAt: newData.createdAt,
+        refreshAt: newData.refreshAt,
+        expiresAt: newData.expiresAt
+      });
+
+      // Actualizar las fechas en el estado reactivo
       state.expiresAt = new Date(newData.expiresAt);
       state.refreshAt = new Date(newData.refreshAt);
+      state.refreshUpdated = true;
+
+      // Añadir animación y reiniciar bandera después de un tiempo
+      setTimeout(() => {
+        state.refreshUpdated = false;
+      }, 1000); // Duración de la animación
     }
-  }
+  },
+  { immediate: true }
 );
 </script>
 

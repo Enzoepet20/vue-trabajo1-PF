@@ -3,7 +3,7 @@ import type { User } from '@/models/User';
 import type { JwtPayload } from '@/models/JwtModel';
 import type { AuthRequestBody } from '@/models/AuthReqModel';
 
-// Array de usuarios en localstorage
+// Array de usuarios en localStorage
 const usersKey = 'vue-3-jwt-refresh-token-users';
 const users: User[] = JSON.parse(localStorage.getItem(usersKey) || '[]');
 
@@ -114,12 +114,13 @@ function fakeBackend() {
             }
 
             function revokeToken() {
-                if (!isLoggedIn()) return unauthorized();
-
                 const refreshToken = getRefreshTokenFromCookie();
+                if (!refreshToken) return unauthorized(); // Verificar si hay un refresh token en la cookie
+
                 const _user = users.find(x => x.refreshTokens.includes(refreshToken));
 
                 if (_user) {
+                    // Si existe el refresh token en el usuario, revocarlo
                     _user.refreshTokens = _user.refreshTokens.filter(x => x !== refreshToken);
                     localStorage.setItem(usersKey, JSON.stringify(users));
                     deleteRefreshTokenCookie(); // Eliminar el token de la cookie
@@ -127,8 +128,6 @@ function fakeBackend() {
 
                 return ok({ msg: 'Token revocado' });
             }
-
-
 
             // Auxiliares
             function ok(body: any) {
@@ -176,6 +175,7 @@ function fakeBackend() {
             }
 
             function getRefreshTokenFromCookie(): string {
+                console.log('Cookies disponibles:', document.cookie); // Para verificar cookies
                 return (document.cookie.split(';').find(x => x.includes('fakeRefreshToken')) || '=').split('=')[1];
             }
 
